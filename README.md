@@ -1,4 +1,4 @@
-# Contador de Peca Produzidas
+# Contador de Peça Produzidas
 
 ## Identificacao do Candidato
 
