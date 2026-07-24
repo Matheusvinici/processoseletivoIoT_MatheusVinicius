@@ -12,7 +12,6 @@
     [ "hx711:VCC", "esp:3V3", "red", [] ],
     [ "hx711:GND", "esp:GND.1", "black", [] ],
     [ "hx711:DT", "esp:19", "green", [ "vpos:0.9", "hpos:0.9" ] ],
-    [ "hx711:DT", "hx711:VCC", "green", [ "resistor: 4700" ] ],
     [ "hx711:SCK", "esp:18", "blue", [ "vpos:0.9", "hpos:0.9" ] ]
   ]
 }

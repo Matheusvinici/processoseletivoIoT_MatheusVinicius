@@ -1,8 +1,15 @@
-from machine import Pin
+import machine
 import time
 
-sck = Pin(18, Pin.OUT, value=0)
-dout = Pin(19, Pin.IN, Pin.PULL_UP)
+machine.Pin(18, machine.Pin.OUT, value=0)
+machine.Pin(19, machine.Pin.IN)
+
+OUT_W1TS = 0x3FF44008
+OUT_W1TC = 0x3FF4400C
+IN_REG = 0x3FF4403C
+
+GPIO18 = 1 << 18
+GPIO19 = 1 << 19
 
 EMPTY_THRESHOLD = 200
 FULL_WEIGHT = 5000
@@ -15,15 +22,15 @@ last_read = 0
 last_report = 0
 
 def hx711_read():
-    if dout.value():
+    if machine.mem32[IN_REG] & GPIO19:
         return None
     v = 0
     for _ in range(24):
-        sck.value(1)
-        v = (v << 1) | dout.value()
-        sck.value(0)
-    sck.value(1)
-    sck.value(0)
+        machine.mem32[OUT_W1TS] = GPIO18
+        v = (v << 1) | ((machine.mem32[IN_REG] & GPIO19) >> 19)
+        machine.mem32[OUT_W1TC] = GPIO18
+    machine.mem32[OUT_W1TS] = GPIO18
+    machine.mem32[OUT_W1TC] = GPIO18
     if v > 0x7fffff:
         v -= 0x1000000
     return v
