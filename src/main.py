@@ -5,13 +5,8 @@ class HX711:
     def __init__(self, dout_pin, sck_pin):
         self.dout = Pin(dout_pin, Pin.IN, Pin.PULL_UP)
         self.sck = Pin(sck_pin, Pin.OUT, value=0)
-        self._buf = 0
 
     def read(self):
-        for _ in range(100):
-            if self.dout.value() == 0:
-                break
-            time.sleep_us(10)
         if self.dout.value() == 1:
             return None
         value = 0
@@ -40,12 +35,6 @@ last_report = 0
 state = "NORMAL"
 weight = 5000
 
-def read_weight():
-    raw = sensor.read()
-    if raw is None:
-        return None
-    return max(0, raw)
-
 print("Sistema Kanban Inicializado")
 
 while True:
@@ -53,25 +42,25 @@ while True:
 
     if time.ticks_diff(now, last_read) >= READ_INTERVAL_MS:
         last_read = now
-        w = read_weight()
-        if w is not None:
-            weight = w
+        raw = sensor.read()
+        if raw is not None:
+            weight = max(0, raw)
 
-        if weight == 0:
-            if state != "ANOMALY":
-                state = "ANOMALY"
-                print("ALERTA: Caixa ausente ou erro de calibração no sensor HX711!")
-        elif weight <= EMPTY_THRESHOLD:
-            if state != "EMPTY":
-                state = "EMPTY"
-                print("Evento de reposição disparado! Caixa vazia detectada.")
-        else:
-            if state == "EMPTY" and weight >= FULL_WEIGHT:
-                state = "NORMAL"
-                print("Abastecimento concluído. Caixa cheia.")
-            elif state != "NORMAL":
-                state = "NORMAL"
-            if state == "NORMAL":
-                if time.ticks_diff(now, last_report) >= REPORT_INTERVAL_MS:
-                    last_report = now
-                    print("Status: Estoque Regular ({}g)".format(weight))
+            if weight == 0:
+                if state != "ANOMALY":
+                    state = "ANOMALY"
+                    print("ALERTA: Caixa ausente ou erro de calibração no sensor HX711!")
+            elif weight <= EMPTY_THRESHOLD:
+                if state != "EMPTY":
+                    state = "EMPTY"
+                    print("Evento de reposição disparado! Caixa vazia detectada.")
+            else:
+                if state == "EMPTY" and weight >= FULL_WEIGHT:
+                    state = "NORMAL"
+                    print("Abastecimento concluído. Caixa cheia.")
+                elif state != "NORMAL":
+                    state = "NORMAL"
+
+    if state == "NORMAL" and time.ticks_diff(now, last_report) >= REPORT_INTERVAL_MS:
+        last_report = now
+        print("Status: Estoque Regular ({}g)".format(weight))
