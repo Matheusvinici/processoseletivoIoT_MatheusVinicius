@@ -12,15 +12,15 @@ class HX711:
         value = 0
         for _ in range(24):
             self.sck.value(1)
-            time.sleep_us(2)
+            time.sleep_us(100)
             value = (value << 1) | self.dout.value()
             self.sck.value(0)
-            time.sleep_us(2)
+            time.sleep_us(100)
         self.sck.value(1)
-        time.sleep_us(2)
+        time.sleep_us(100)
         self.sck.value(0)
-        time.sleep_us(2)
-        if value & 0x800000:
+        time.sleep_us(100)
+        if value > 0x7fffff:
             value -= 0x1000000
         return value
 
@@ -43,8 +43,8 @@ while True:
     if time.ticks_diff(now, last_read) >= READ_INTERVAL_MS:
         last_read = now
         raw = sensor.read()
-        if raw is not None:
-            weight = max(0, raw)
+        if raw is not None and 0 <= raw <= 100000:
+            weight = raw
 
             if weight == 0:
                 if state != "ANOMALY":
