@@ -77,8 +77,21 @@ jobs:
         name: esp32-firmware-binary
         path: .
 
+    - name: Create logs directory
+      run: mkdir -p logs
+
     - name: Test with Wokwi
       uses: wokwi/wokwi-ci-action@v1
       with:
         token: ${{ secrets.WOKWI_CLI_TOKEN }}
+        timeout: 30000
         scenario: 'scenarios/${{ needs.detect_project.outputs.project_folder }}/${{ matrix.test_type }}.yaml'
+        serial_log_file: 'logs/serial-${{ matrix.test_type }}.txt'
+
+    - name: Upload Serial Log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: serial-log-${{ matrix.test_type }}
+        path: logs/serial-${{ matrix.test_type }}.txt
+        retention-days: 1
