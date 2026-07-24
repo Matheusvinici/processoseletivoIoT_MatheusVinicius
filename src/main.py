@@ -14,7 +14,7 @@ print("Contador de Producao Inicializado")
 while True:
     now = time.ticks_ms()
 
-    bright_now = ldr.value()
+    bright_now = not ldr.value()
 
     if last_bright and not bright_now:
         counter += 1
