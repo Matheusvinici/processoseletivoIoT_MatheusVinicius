@@ -3,7 +3,7 @@ import time
 
 class HX711:
     def __init__(self, dout, sck):
-        self.dout = Pin(dout, Pin.IN, Pin.PULL_UP)
+        self.dout = Pin(dout, Pin.IN)
         self.sck = Pin(sck, Pin.OUT, value=0)
 
     def read(self):
@@ -12,14 +12,10 @@ class HX711:
         value = 0
         for _ in range(24):
             self.sck.value(1)
-            time.sleep_us(20)
+            time.sleep_us(1)
             value = (value << 1) | self.dout.value()
             self.sck.value(0)
-            time.sleep_us(20)
-        self.sck.value(1)
-        time.sleep_us(20)
-        self.sck.value(0)
-        time.sleep_us(20)
+            time.sleep_us(1)
         if value > 0x7fffff:
             value -= 0x1000000
         return value
