@@ -1,51 +1,53 @@
-# Monitor de Estoque Kanban Inteligente
+# Contador de Peca Produzidas
 
-## Identificação do Candidato
+## Identificacao do Candidato
 
 - **Nome completo:** Matheus Vinicius Vidal de Andrade
 - **GitHub:** [@Matheusvinici](https://github.com/Matheusvinici/processoseletivoIoT_MatheusVinicius)
 
-## Visão Geral da Solução
+## Visao Geral da Solucao
 
-Sistema embarcado para monitoramento de estoque em almoxarifados utilizando sensor de peso HX711 com ESP32. O firmware lê continuamente o peso de uma caixa organizadora, detecta consumo de peças, dispara alertas de reposição quando o estoque atinge nível crítico, e identifica anomalias como caixa ausente ou falha no sensor.
+Sistema embarcado para contagem de pecas produzidas utilizando sensor LDR (fotoresistor) e ESP32-S3. O firmware monitora a luminosidade ambiente: quando uma peca passa e bloqueia a luz, o contador incrementa. Um botao fisico permite resetar o contador. Ideal para linhas de producao industrial.
 
 ## Arquitetura do Sistema Embarcado
 
-O firmware opera com uma máquina de estados não-bloqueante baseada em `time.ticks_ms()`:
+O firmware opera com um loop nao-bloqueante baseado em `time.ticks_ms()`:
 
-- **NORMAL** — estoque dentro da faixa segura. Reporta periodicamente o peso atual.
-- **EMPTY** — peso abaixo do limiar mínimo (200g). Dispara alerta de reposição único.
-- **ANOMALY** — peso igual a 0g (caixa removida ou falha). Alerta de manutenção crítica.
+- Leitura digital do pino DO do LDR (HIGH = escuro, LOW = claro)
+- Deteccao de borda de descida (transicao claro → escuro) incrementa o contador
+- Botao (GPIO15, PULL_UP, active-low) reseta o contador
+- Relatorio periodico de status a cada 2 segundos
 
-Transições: NORMAL → EMPTY (consumo total), EMPTY → NORMAL (reabastecimento), qualquer estado → ANOMALY (peso zero).
+## Componentes Utilizados na Simulacao
 
-## Componentes Utilizados na Simulação
+| Componente          | ID    | Funcao                          |
+|---------------------|-------|----------------------------------|
+| ESP32-S3 DevKit C-1 | esp   | Microcontrolador                 |
+| LDR (fotoresistor)  | ldr1  | Sensor de luminosidade (DO)      |
+| Pushbutton          | btn1  | Botao de reset (ativo baixo)     |
 
-| Componente     | ID     | Função                              |
-|----------------|--------|--------------------------------------|
-| ESP32 DevKit C | esp    | Microcontrolador                     |
-| HX711          | hx711  | Sensor de peso (célula de carga)     |
+### Conexoes (diagram.json)
 
-### Conexões (diagram.json)
+- LDR VCC → ESP32 3V3.1
+- LDR GND → ESP32 GND.1
+- LDR DO → GPIO4
+- Botao 1.l → GPIO15
+- Botao 2.l → ESP32 GND.1
 
-- HX711 VCC → ESP32 3V3
-- HX711 GND → ESP32 GND
-- HX711 DT → GPIO19
-- HX711 SCK → GPIO18
+## Decisoes Tecnicas Relevantes
 
-## Decisões Técnicas Relevantes
-
-- **Arquitetura não-bloqueante**: todo o loop usa `time.ticks_ms()` para temporização, sem `time.sleep()`, garantindo que os testes CI do Wokwi não percam eventos.
-- **Mensagens exatas**: strings seguem rigorosamente o especificado nos testes (sem acentos em mensagens como "reposicao", "calibracao", "concluido") para casamento caractere-por-caractere do CI.
-- **HX711 via bit-banging**: implementação do protocolo do HX711 via GPIO, sem dependências externas.
+- **Arquitetura nao-bloqueante**: todo o loop usa `time.ticks_ms()` para temporizacao, sem `time.sleep()`, garantindo que os testes CI do Wokwi nao percam eventos.
+- **Mensagens exatas**: strings seguem rigorosamente o especificado nos testes para casamento caractere-por-caractere do CI.
+- **DO digital**: uso da saida digital do LDR (nao ADC) para maior robustez na simulacao Wokwi.
+- **Pull-up interno**: GPIO4 e GPIO15 configurados com pull-up interno para evitar flutuacao.
 
 ## Resultados Obtidos
 
-O firmware passa nos 3 cenários de teste do Wokwi CI:
+O firmware passa nos 3 cenarios de teste do Wokwi CI:
 
-1. **Consumo Parcial** — peso cai de 5000g para 2500g → reporta "Status: Estoque Regular (2500g)"
-2. **Ciclo Completo** — peso cai para 150g → alerta de reposição; retorna para 5000g → confirma reabastecimento
-3. **Anomalia** — peso vai a 0g → alerta de caixa ausente/erro de calibração
+1. **Deteccao de Primeira Peca** — bloqueio de luz → incrementa contador para 1
+2. **Reset do Contador** — bloqueio de luz → contagem 1 → pressiona botao → reseta para 0
+3. **Contagem Multipla** — 3 bloqueios consecutivos → contagem ate 3
 
 ### Como executar localmente
 
@@ -54,4 +56,8 @@ docker build -t esp32-builder -f Dockerfile .
 docker run --rm -v "$(pwd)/src:/mnt/src" -v "$(pwd):/mnt/out" esp32-builder bash -c "mkdir -p /tmp/fs && cp -r /mnt/src/* /tmp/fs/ && /mklittlefs/mklittlefs -c /tmp/fs -b 4096 -p 256 -s 0x200000 /mnt/out/fs.bin"
 ```
 
-Após o build, faça push para o GitHub para executar os testes automáticos via GitHub Actions.
+Apos o build, faca push para o GitHub para executar os testes automaticos via GitHub Actions.
+
+### Wokwi CLI Token
+
+O token deve estar configurado como `WOKWI_CLI_TOKEN` nos secrets do GitHub.
