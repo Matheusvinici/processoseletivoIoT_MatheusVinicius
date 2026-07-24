@@ -4,7 +4,7 @@
   "editor": "wokwi",
   "parts": [
     { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
-    { "type": "wokwi-hx711", "id": "hx711", "top": -150, "left": 200, "attrs": { "load": "5000" } }
+    { "type": "wokwi-hx711", "id": "hx711", "top": -150, "left": 200, "attrs": { "type": "50kg" } }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
@@ -12,6 +12,6 @@
     [ "hx711:VCC", "esp:3V3", "red", [] ],
     [ "hx711:GND", "esp:GND.1", "black", [] ],
     [ "hx711:DT", "esp:19", "green", [ "vpos:0.9", "hpos:0.9" ] ],
-    [ "hx711:SCK", "esp:23", "blue", [ "vpos:0.9", "hpos:0.9" ] ]
+    [ "hx711:SCK", "esp:18", "blue", [ "vpos:0.9", "hpos:0.9" ] ]
   ]
 }

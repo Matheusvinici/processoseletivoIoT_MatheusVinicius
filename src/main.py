@@ -1,11 +1,34 @@
+from machine import Pin
 import time
-from hx711_spi import HX711
 
-sensor = HX711(23, 19, gain=128)
+class HX711:
+    def __init__(self, dout, sck):
+        self.dout = Pin(dout, Pin.IN, Pin.PULL_UP)
+        self.sck = Pin(sck, Pin.OUT, value=0)
+
+    def read(self):
+        if self.dout.value() == 1:
+            return None
+        value = 0
+        for _ in range(24):
+            self.sck.value(1)
+            time.sleep_us(20)
+            value = (value << 1) | self.dout.value()
+            self.sck.value(0)
+            time.sleep_us(20)
+        self.sck.value(1)
+        time.sleep_us(20)
+        self.sck.value(0)
+        time.sleep_us(20)
+        if value > 0x7fffff:
+            value -= 0x1000000
+        return value
+
+sensor = HX711(19, 18)
 
 EMPTY_THRESHOLD = 200
 FULL_WEIGHT = 5000
-READ_INTERVAL_MS = 500
+READ_INTERVAL_MS = 1000
 REPORT_INTERVAL_MS = 2000
 
 last_read = 0
@@ -23,7 +46,6 @@ while True:
         raw = sensor.read()
         if raw is not None and 0 <= raw <= 100000:
             weight = raw
-
             if weight == 0:
                 if state != "ANOMALY":
                     state = "ANOMALY"
