@@ -3,47 +3,48 @@ import time
 
 class HX711:
     def __init__(self, dout_pin, sck_pin):
-        self.dout = Pin(dout_pin, Pin.IN)
+        self.dout = Pin(dout_pin, Pin.IN, Pin.PULL_UP)
         self.sck = Pin(sck_pin, Pin.OUT, value=0)
+        self._buf = 0
 
     def read(self):
+        for _ in range(100):
+            if self.dout.value() == 0:
+                break
+            time.sleep_us(10)
         if self.dout.value() == 1:
             return None
         value = 0
         for _ in range(24):
             self.sck.value(1)
-            time.sleep_us(1)
+            time.sleep_us(2)
             value = (value << 1) | self.dout.value()
             self.sck.value(0)
-            time.sleep_us(1)
+            time.sleep_us(2)
         self.sck.value(1)
-        time.sleep_us(1)
+        time.sleep_us(2)
         self.sck.value(0)
-        time.sleep_us(1)
+        time.sleep_us(2)
         if value & 0x800000:
             value -= 0x1000000
         return value
 
 EMPTY_THRESHOLD = 200
 FULL_WEIGHT = 5000
-READ_INTERVAL_MS = 100
+READ_INTERVAL_MS = 200
 REPORT_INTERVAL_MS = 2000
 
 sensor = HX711(19, 18)
-
-offset = 0
-scale = 1
-
 last_read = 0
 last_report = 0
 state = "NORMAL"
+weight = 5000
 
-def get_weight():
+def read_weight():
     raw = sensor.read()
     if raw is None:
         return None
-    w = int((raw - offset) / scale)
-    return max(0, w)
+    return max(0, raw)
 
 print("Sistema Kanban Inicializado")
 
@@ -52,9 +53,9 @@ while True:
 
     if time.ticks_diff(now, last_read) >= READ_INTERVAL_MS:
         last_read = now
-        weight = get_weight()
-        if weight is None:
-            continue
+        w = read_weight()
+        if w is not None:
+            weight = w
 
         if weight == 0:
             if state != "ANOMALY":
