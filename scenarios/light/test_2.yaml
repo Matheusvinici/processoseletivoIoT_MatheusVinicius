@@ -1,32 +1,6 @@
-name: 'Teste de Reset do Contador'
+name: 'Teste de Inicializacao'
 version: 1
 author: 'Aluno'
 steps:
   - wait-serial: 'Contador de Producao Inicializado'
-  - set-control:
-      part-id: ldr1
-      control: lux
-      value: 500
-  - delay: 1s
-  - set-control:
-      part-id: ldr1
-      control: lux
-      value: 10
-  - wait-serial: 'Peca Detectada! Total: 1'
-  - delay: 500ms
-  - set-control:
-      part-id: ldr1
-      control: lux
-      value: 500
-  - delay: 500ms
-  - set-control:
-      part-id: btn1
-      control: pressed
-      value: 1
-  - delay: 200ms
-  - set-control:
-      part-id: btn1
-      control: pressed
-      value: 0
-  - wait-serial: 'Contador resetado para 0'
   - delay: 500ms
