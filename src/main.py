@@ -3,35 +3,28 @@ import time
 
 class HX711:
     def __init__(self, dout_pin, sck_pin):
-        self.dout = Pin(dout_pin, Pin.IN, Pin.PULL_UP)
+        self.dout = Pin(dout_pin, Pin.IN)
         self.sck = Pin(sck_pin, Pin.OUT, value=0)
 
     def read(self):
-        if self.dout.value() == 1:
-            return None
         value = 0
         for _ in range(24):
             self.sck.value(1)
-            time.sleep_us(100)
+            time.sleep_us(20)
             value = (value << 1) | self.dout.value()
             self.sck.value(0)
-            time.sleep_us(100)
-        for _ in range(3):
-            self.sck.value(1)
-            time.sleep_us(100)
-            if self.dout.value() == 1:
-                self.sck.value(0)
-                time.sleep_us(100)
-                break
-            self.sck.value(0)
-            time.sleep_us(100)
+            time.sleep_us(20)
+        self.sck.value(1)
+        time.sleep_us(20)
+        self.sck.value(0)
+        time.sleep_us(20)
         if value > 0x7fffff:
             value -= 0x1000000
         return value
 
 EMPTY_THRESHOLD = 200
 FULL_WEIGHT = 5000
-READ_INTERVAL_MS = 200
+READ_INTERVAL_MS = 500
 REPORT_INTERVAL_MS = 2000
 
 sensor = HX711(19, 18)
@@ -48,7 +41,7 @@ while True:
     if time.ticks_diff(now, last_read) >= READ_INTERVAL_MS:
         last_read = now
         raw = sensor.read()
-        if raw is not None and 0 <= raw <= 100000:
+        if 0 <= raw <= 100000:
             weight = raw
 
             if weight == 0:
