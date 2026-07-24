@@ -16,10 +16,15 @@ class HX711:
             value = (value << 1) | self.dout.value()
             self.sck.value(0)
             time.sleep_us(100)
-        self.sck.value(1)
-        time.sleep_us(100)
-        self.sck.value(0)
-        time.sleep_us(100)
+        for _ in range(3):
+            self.sck.value(1)
+            time.sleep_us(100)
+            if self.dout.value() == 1:
+                self.sck.value(0)
+                time.sleep_us(100)
+                break
+            self.sck.value(0)
+            time.sleep_us(100)
         if value > 0x7fffff:
             value -= 0x1000000
         return value
