@@ -1,14 +1,8 @@
-from machine import Pin, ADC
+from machine import Pin
 import time
 
-ldr = ADC(Pin(34))
-ldr.atten(ADC.ATTN_11DB)
-ldr.width(ADC.WIDTH_12BIT)
-
+ldr = Pin(4, Pin.IN, Pin.PULL_UP)
 btn = Pin(15, Pin.IN, Pin.PULL_UP)
-
-DARK_THRESHOLD = 3000
-BRIGHT_THRESHOLD = 2000
 
 counter = 0
 last_bright = True
@@ -20,8 +14,7 @@ print("Contador de Producao Inicializado")
 while True:
     now = time.ticks_ms()
 
-    val = ldr.read()
-    bright_now = val < BRIGHT_THRESHOLD
+    bright_now = ldr.value()
 
     if last_bright and not bright_now:
         counter += 1
