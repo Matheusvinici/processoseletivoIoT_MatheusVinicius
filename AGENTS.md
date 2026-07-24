@@ -30,9 +30,9 @@ Secret must be set as `WOKWI_CLI_TOKEN` (README says `WOKWI_API_KEY` but CI uses
 
 ## Available components per scenario
 
-**Weight (Kanban):** `hx711` (load sensor) — no button needed
-**Light (Counter):** `ldr1` (lux sensor) + `btn1` (reset button)
-**Temperature:** `imu1` (MPU6050 temp sensor) + `btn1` (door switch)
+**Weight (Kanban):** `hx711` — no button needed _(abandoned, HX711 buggy in Wokwi)_
+**Light (Counter):** `ldr1` (AO→GPIO34 ADC) + `btn1` (reset, GPIO15 PULL_UP, active-low) ← **active**
+**Temperature:** `imu1` (MPU6050 I2C) + `btn1` (door switch)
 
 ## Local build
 

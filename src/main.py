@@ -1,65 +1,39 @@
-import machine
+from machine import Pin, ADC
 import time
 
-machine.Pin(18, machine.Pin.OUT, value=0)
-machine.Pin(19, machine.Pin.IN)
+ldr = ADC(Pin(34))
+ldr.atten(ADC.ATTN_11DB)
+ldr.width(ADC.WIDTH_12BIT)
 
-OUT_W1TS = 0x3FF44008
-OUT_W1TC = 0x3FF4400C
-IN_REG = 0x3FF4403C
+btn = Pin(15, Pin.IN, Pin.PULL_UP)
 
-GPIO18 = 1 << 18
-GPIO19 = 1 << 19
+DARK_THRESHOLD = 3000
+BRIGHT_THRESHOLD = 2000
 
-EMPTY_THRESHOLD = 200
-FULL_WEIGHT = 5000
-READ_INTERVAL_MS = 1000
-REPORT_INTERVAL_MS = 2000
-
-weight = 5000
-state = "NORMAL"
-last_read = 0
+counter = 0
+last_bright = True
+last_btn = True
 last_report = 0
 
-def hx711_read():
-    if machine.mem32[IN_REG] & GPIO19:
-        return None
-    v = 0
-    for _ in range(24):
-        machine.mem32[OUT_W1TS] = GPIO18
-        v = (v << 1) | ((machine.mem32[IN_REG] & GPIO19) >> 19)
-        machine.mem32[OUT_W1TC] = GPIO18
-    machine.mem32[OUT_W1TS] = GPIO18
-    machine.mem32[OUT_W1TC] = GPIO18
-    if v > 0x7fffff:
-        v -= 0x1000000
-    return v
-
-print("Sistema Kanban Inicializado")
+print("Contador de Producao Inicializado")
 
 while True:
     now = time.ticks_ms()
 
-    if time.ticks_diff(now, last_read) >= READ_INTERVAL_MS:
-        last_read = now
-        raw = hx711_read()
-        if raw is not None and 0 <= raw <= 100000:
-            weight = raw
-            if weight == 0:
-                if state != "ANOMALY":
-                    state = "ANOMALY"
-                    print("ALERTA: Caixa ausente ou erro de calibração no sensor HX711!")
-            elif weight <= EMPTY_THRESHOLD:
-                if state != "EMPTY":
-                    state = "EMPTY"
-                    print("Evento de reposição disparado! Caixa vazia detectada.")
-            else:
-                if state == "EMPTY" and weight >= FULL_WEIGHT:
-                    state = "NORMAL"
-                    print("Abastecimento concluído. Caixa cheia.")
-                elif state != "NORMAL":
-                    state = "NORMAL"
+    val = ldr.read()
+    bright_now = val < BRIGHT_THRESHOLD
 
-    if state == "NORMAL" and time.ticks_diff(now, last_report) >= REPORT_INTERVAL_MS:
+    if last_bright and not bright_now:
+        counter += 1
+        print("Peca Detectada! Total: {}".format(counter))
+    last_bright = bright_now
+
+    btn_val = btn.value()
+    if last_btn and not btn_val:
+        counter = 0
+        print("Contador resetado para 0")
+    last_btn = btn_val
+
+    if time.ticks_diff(now, last_report) >= 2000:
         last_report = now
-        print("Status: Estoque Regular ({}g)".format(weight))
+        print("Contagem atual: {} pecas".format(counter))
