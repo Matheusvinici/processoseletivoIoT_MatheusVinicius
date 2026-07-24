@@ -1,62 +1,54 @@
 from machine import Pin
 import time
 
-class HX711:
-    def __init__(self, dout, sck):
-        self.dout = Pin(dout, Pin.IN)
-        self.sck = Pin(sck, Pin.OUT, value=0)
-
-    def read(self):
-        if self.dout.value() == 1:
-            return None
-        value = 0
-        for _ in range(24):
-            self.sck.value(1)
-            time.sleep_us(1)
-            value = (value << 1) | self.dout.value()
-            self.sck.value(0)
-            time.sleep_us(1)
-        if value > 0x7fffff:
-            value -= 0x1000000
-        return value
-
-sensor = HX711(19, 18)
+sck = Pin(18, Pin.OUT, value=0)
+dout = Pin(19, Pin.IN)
 
 EMPTY_THRESHOLD = 200
 FULL_WEIGHT = 5000
-READ_INTERVAL_MS = 1000
-REPORT_INTERVAL_MS = 2000
 
-last_read = 0
-last_report = 0
-state = "NORMAL"
 weight = 5000
+state = "NORMAL"
+last_report = 0
+
+def hx711_read():
+    if dout.value():
+        return None
+    v = 0
+    for _ in range(24):
+        sck.value(1)
+        v = (v << 1) | dout.value()
+        sck.value(0)
+    sck.value(1)
+    sck.value(0)
+    if v > 0x7fffff:
+        v -= 0x1000000
+    return v
 
 print("Sistema Kanban Inicializado")
 
 while True:
+    raw = hx711_read()
+    if raw is not None and 0 <= raw <= 100000:
+        weight = raw
+        if weight == 0:
+            if state != "ANOMALY":
+                state = "ANOMALY"
+                print("ALERTA: Caixa ausente ou erro de calibração no sensor HX711!")
+        elif weight <= EMPTY_THRESHOLD:
+            if state != "EMPTY":
+                state = "EMPTY"
+                print("Evento de reposição disparado! Caixa vazia detectada.")
+        else:
+            if state == "EMPTY" and weight >= FULL_WEIGHT:
+                state = "NORMAL"
+                print("Abastecimento concluído. Caixa cheia.")
+            elif state != "NORMAL":
+                state = "NORMAL"
+
     now = time.ticks_ms()
-
-    if time.ticks_diff(now, last_read) >= READ_INTERVAL_MS:
-        last_read = now
-        raw = sensor.read()
-        if raw is not None and 0 <= raw <= 100000:
-            weight = raw
-            if weight == 0:
-                if state != "ANOMALY":
-                    state = "ANOMALY"
-                    print("ALERTA: Caixa ausente ou erro de calibração no sensor HX711!")
-            elif weight <= EMPTY_THRESHOLD:
-                if state != "EMPTY":
-                    state = "EMPTY"
-                    print("Evento de reposição disparado! Caixa vazia detectada.")
-            else:
-                if state == "EMPTY" and weight >= FULL_WEIGHT:
-                    state = "NORMAL"
-                    print("Abastecimento concluído. Caixa cheia.")
-                elif state != "NORMAL":
-                    state = "NORMAL"
-
-    if state == "NORMAL" and time.ticks_diff(now, last_report) >= REPORT_INTERVAL_MS:
+    if state == "NORMAL" and time.ticks_diff(now, last_report) >= 2000:
         last_report = now
         print("Status: Estoque Regular ({}g)".format(weight))
+
+    time.sleep_ms(500)
